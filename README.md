@@ -5,6 +5,7 @@ export REDSHIFT_DB="dev"
 export REDSHIFT_USERNAME="awsuser"
 export REDSHIFT_PASSWORD=""
 * rake db:setup
+time ./process_data.py -input_files standard_match_filters_drugs_only_exclusions_assignment_report_12022017.csv
 
 Note:
 ========
