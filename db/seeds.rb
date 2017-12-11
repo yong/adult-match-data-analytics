@@ -10,10 +10,11 @@ InclusionScenerio.find_or_create_by(description: 'dynamic amois and cnv/snv')
 InclusionScenerio.find_or_create_by(description: 'cnv/snv')
 InclusionScenerio.find_or_create_by(description: 'dynamic amois')
 InclusionScenerio.find_or_create_by(description: 'standard')
-
+puts "InclusionScenerio: #{InclusionScenerio.count}"
 
 ExclusionScenerio.find_or_create_by(description: 'no exclusions')
 ExclusionScenerio.find_or_create_by(description: 'disease only exclusions')
 ExclusionScenerio.find_or_create_by(description: 'drug only exclusions')
 ExclusionScenerio.find_or_create_by(description: 'amoi only exclusions')
 ExclusionScenerio.find_or_create_by(description: 'standard exclusions')
+puts "ExclusionScenerio: #{ExclusionScenerio.count}"

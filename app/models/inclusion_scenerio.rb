@@ -1,0 +1,2 @@
+class InclusionScenerio < ApplicationRecord
+end

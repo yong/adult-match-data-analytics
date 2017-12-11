@@ -1,0 +1,2 @@
+class ExclusionScenerio < ApplicationRecord
+end
