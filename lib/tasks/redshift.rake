@@ -1,4 +1,11 @@
 namespace :redshift do
+
+  desc "move data from dynamodb/mongodb to redshift using activerecord"
+  task etl: :environment do
+    p MongoPatient.first
+  end
+
+=begin
   desc "move data from s3 to redshift using COPY command"
   task etl: :environment do
     # setup AWS credentials
@@ -33,5 +40,5 @@ namespace :redshift do
     GZIP
     EOS
   end
-
+=end
 end
