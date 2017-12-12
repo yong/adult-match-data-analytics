@@ -57,10 +57,18 @@ def chop_ICC_and_s(gene):
     s = re.sub(r"^ICC", "", gene)
     return re.sub(r"s$", "", s)
 
-#10007,snv,COSM10704,chr17,7577094(position),G(ref),A(atl),0.868934(allel ),TP53(gene),Hotspot(oncomine),8,missense(classification),c.844C>T(cdns id),1999(read_depth!!!!),NM_000546.5(ncbi ),p.Arg282Trp(protein)
-#10009,ihc,ICCPTENs(chop of ICC and s at the end!!!!),POSITIVE
+def truncate_then_load_table(table_name, keys, values, cnx, cursor):
+    print(values)
+    cursor.execute('truncate ' + table_name)
+    insert_query = 'insert into {} ({}) values %s'.format(table_name, keys)
+    psycopg2.extras.execute_values(cursor, insert_query, values, template=None, page_size=100)
+    cnx.commit()
+
 def process_variants_file(input_file, cnx, cursor):
     ihc = []
+    fusion = []
+    cnv = []
+    snv_mnv_indel = []
     with open(input_file, 'r') as f:
         reader = csv.reader(f)
         current_line = 0
@@ -71,14 +79,22 @@ def process_variants_file(input_file, cnx, cursor):
             if row[1] == 'NO_SEQUENCING_DATA':
                 continue
             elif row[1] == 'ihc':
+                #10009,ihc,ICCPTENs(chop of ICC and s at the end!!!!),POSITIVE
                 ihc.append((row[0], chop_ICC_and_s(row[2]), row[3]))
-    print(ihc)
-    cursor.execute('truncate ihc')
-    ihc_insert_query = 'insert into ihc (patients_id, gene, result) values %s'
-    psycopg2.extras.execute_values (
-        cursor, ihc_insert_query, ihc, template=None, page_size=100
-    )
-    cnx.commit()
+            elif row[1] == 'fusion':
+                #10011,fusion,TMPRSS2-ERG.T1E4.COSF38(id),ERG(gene1),100732(read depeth),TMPRSS2(2),100732(read depth2),COSF38(useless)
+                fusion.append((row[0], row[2], row[3], row[4], row[5], row[6]))
+            elif row[1] == 'cnv':
+                #10004,cnv,CCND1,chr11,69456941,7.99999,8.0,7.60182,8.44006
+                cnv.append((row[0], row[2], row[3], row[4], row[5], row[6], row[7], row[8]))
+            elif row[1] == 'snv' or row[1] == 'mnv' or row[1] == 'indel':
+                #10007,snv,COSM10704,chr17,7577094(position),G(ref),A(atl),0.868934(allel ),TP53(gene),Hotspot(oncomine),8,missense(classification),c.844C>T(cdns id),1999(read_depth!!!!),NM_000546.5(ncbi ),p.Arg282Trp(protein)
+                snv_mnv_indel.append((row[0], row[2], row[1], row[8], row[3], row[4], row[7], row[5], row[6], row[9], row[11], row[10], row[13], row[15], row[14]))
+    truncate_then_load_table("ihc", "patients_id, gene, result", ihc, cnx, cursor)
+    truncate_then_load_table("fusion", "patients_id, fusion_id, gene_1, read_depth_gene_1, gene_2, read_depth_gene_2", fusion, cnx, cursor)
+    #TODO float?
+    #truncate_then_load_table("cnv", "patients_id, gene, chromosome, position, raw_copy_number, copy_number, ci_5, ci_95", cnv, cnx, cursor)
+    truncate_then_load_table("snv_mnv_indel", "patients_id, variant_id, variant_type, gene, chromosome, position, allele_frequency, reference, alternative, oncomine_classification, cdns, classification, read_depth, protein, ncbi_reference_number", snv_mnv_indel, cnx, cursor)
 
 def process_input_file(input_file, cnx, cursor, ids):
     with open(input_file, 'r') as f:
