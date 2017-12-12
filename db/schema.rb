@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20171207222113) do
+ActiveRecord::Schema.define(version: 20171212160315) do
 
   create_table "arms", id: :integer, force: :cascade do |t|
     t.integer "patient_scenerios_id", null: false
@@ -91,6 +91,7 @@ ActiveRecord::Schema.define(version: 20171207222113) do
     t.string "classification", limit: 256
     t.string "protein", limit: 256
     t.string "ncbi_reference_number", limit: 256
+    t.integer "read_depth"
   end
 
 end
