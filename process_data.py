@@ -57,12 +57,16 @@ def chop_ICC_and_s(gene):
     s = re.sub(r"^ICC", "", gene)
     return re.sub(r"s$", "", s)
 
-def truncate_then_load_table(table_name, keys, values, cnx, cursor):
+def load_table(table_name, keys, values, cnx, cursor):
     print(values)
-    cursor.execute('truncate ' + table_name)
     insert_query = 'insert into {} ({}) values %s'.format(table_name, keys)
     psycopg2.extras.execute_values(cursor, insert_query, values, template=None, page_size=100)
     cnx.commit()
+
+def truncate_then_load_table(table_name, keys, values, cnx, cursor):
+    print(values)
+    cursor.execute('truncate ' + table_name)
+    load_table(table_name, keys, values, cnx, cursor)
 
 def process_variants_file(input_file, cnx, cursor):
     ihc = []
@@ -92,11 +96,25 @@ def process_variants_file(input_file, cnx, cursor):
                 snv_mnv_indel.append((row[0], row[2], row[1], row[8], row[3], row[4], row[7], row[5], row[6], row[9], row[11], row[10], row[13], row[15], row[14]))
     truncate_then_load_table("ihc", "patients_id, gene, result", ihc, cnx, cursor)
     truncate_then_load_table("fusion", "patients_id, fusion_id, gene_1, read_depth_gene_1, gene_2, read_depth_gene_2", fusion, cnx, cursor)
-    #TODO float?
-    #truncate_then_load_table("cnv", "patients_id, gene, chromosome, position, raw_copy_number, copy_number, ci_5, ci_95", cnv, cnx, cursor)
+    truncate_then_load_table("cnv", "patients_id, gene, chromosome, position, raw_copy_number, copy_number, ci_5, ci_95", cnv, cnx, cursor)
     truncate_then_load_table("snv_mnv_indel", "patients_id, variant_id, variant_type, gene, chromosome, position, allele_frequency, reference, alternative, oncomine_classification, cdns, classification, read_depth, protein, ncbi_reference_number", snv_mnv_indel, cnx, cursor)
 
+
 def process_input_file(input_file, cnx, cursor, ids):
+    patients = []
+    patient_scenerios = []
+    arms = []
+
+    cursor.execute("SELECT patients_id from patients")
+    dbrows = cursor.fetchall()
+    exising_patient_ids = sum(dbrows, ())
+    #print(exising_patient_ids)
+
+    cursor.execute("SELECT patient_scenerios_id from patient_scenerios")
+    dbrows = cursor.fetchall()
+    exising_patient_scenerios_ids = sum(dbrows, ())
+    #print(exising_patient_scenerios_ids)
+
     with open(input_file, 'r') as f:
         reader = csv.reader(f)
         current_line = 0
@@ -104,42 +122,36 @@ def process_input_file(input_file, cnx, cursor, ids):
             current_line += 1
             print("****line {}".format(current_line))
 
-            arms = []
-            for arm in row[5].split(';'):
-                arms.append({"name":arm, "type":"POTENTIAL"})
-
-            for arm in row[6].split(';'):
-                arms.append({"name": arm, "type": "SELECTED"})
-
             for idx, element in enumerate(row):
                 row[idx] = (None if element == "-" else element)
 
-            patient_query = f"SELECT count(*) FROM patients WHERE id = '{row[0]}';"
-            print(patient_query)
-            cursor.execute(patient_query)
+            try:
+                i = exising_patient_ids.index(int(row[0]))
+            except ValueError:
+                patients.append((row[0], row[1], row[2], row[3], row[4]))
 
-            if cursor.fetchone()[0] < 1:
-                add_patient = f"INSERT INTO patients (patients_id, meddra_code, disease, vcf_version, sequencing_date, created_at, updated_at) " \
-                              f"VALUES ({row[0]}, '{row[1]}', '{row[2]}', '{row[3]}', '{row[4]}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);"
-                print(add_patient)
-                cursor.execute(add_patient)
-                cnx.commit()
+            #As there is no RETURNING in redshift, we can not get the last inserted row's id.
+            #Used a precomputed one instead
+            patient_scenerios_id = int(str(ids[0]) + str(ids[1]) + str(row[0]))
 
-            add_patient_scenerios = f"INSERT INTO patient_scenerios (patients_id, inclusion_scenerios_id, " \
-                                    f"exclusion_scenerios_id, created_at, updated_at) VALUES({row[0]},{ids[0]},{ids[1]}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);"
-            print(add_patient_scenerios)
-            cursor.execute(add_patient_scenerios)
-            patient_scenerio_id = cursor.lastrowid
+            try:
+                i = exising_patient_scenerios_ids.index(patient_scenerios_id)
+            except ValueError:
+                patient_scenerios.append((row[0], ids[0], ids[1], patient_scenerios_id))
 
-            for arm in arms:
-                name = arm["name"]
-                s_type = arm["type"]
-                add_arm = f"INSERT INTO arms (patient_scenerios_id, arm, selection_type, created_at, updated_at) " \
-                          f"VALUES ({patient_scenerio_id}, '{name}', '{s_type}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);"
-                print(add_arm)
-                cursor.execute(add_arm)
+                for arm in row[5].split(';'):
+                    arms.append((patient_scenerios_id, arm, "POTENTIAL"))
 
-            cnx.commit()
+                for arm in row[6].split(';'):
+                    arms.append((patient_scenerios_id, arm, "SELECTED"))
+
+    load_table("patients", "patients_id, meddra_code, disease, vcf_version, sequencing_date", patients, cnx, cursor)
+    load_table("patient_scenerios", "patients_id, inclusion_scenerios_id, exclusion_scenerios_id, patient_scenerios_id", patient_scenerios, cnx, cursor)
+    load_table("arms", "patient_scenerios_id, arm, selection_type", arms, cnx, cursor)
+
+    print(len(patients))
+    print(len(patient_scenerios))
+    print(len(arms))
 
 def process_files(input_files):
     cnx = psycopg2.connect(user=os.environ['REDSHIFT_USERNAME'], password=os.environ['REDSHIFT_PASSWORD'], database=os.environ['REDSHIFT_DB'], port=5439, host=os.environ['REDSHIFT_HOST'])

@@ -10,14 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20171212160315) do
+ActiveRecord::Schema.define(version: 20171207222113) do
 
   create_table "arms", id: :integer, force: :cascade do |t|
     t.integer "patient_scenerios_id", null: false
     t.string "arm", limit: 256, null: false
     t.string "selection_type", limit: 256, default: "POTENTIAL", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
   end
 
   create_table "cnv", id: :integer, force: :cascade do |t|
@@ -25,8 +23,8 @@ ActiveRecord::Schema.define(version: 20171212160315) do
     t.string "gene", limit: 256
     t.string "chromosome", limit: 256
     t.integer "position"
-    t.integer "raw_copy_number"
-    t.integer "copy_number"
+    t.float "raw_copy_number"
+    t.float "copy_number"
     t.float "ci_5"
     t.float "ci_95"
   end
@@ -60,10 +58,9 @@ ActiveRecord::Schema.define(version: 20171212160315) do
 
   create_table "patient_scenerios", id: :integer, force: :cascade do |t|
     t.integer "patients_id", null: false
+    t.integer "patient_scenerios_id"
     t.integer "inclusion_scenerios_id", null: false
     t.integer "exclusion_scenerios_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
   end
 
   create_table "patients", id: :integer, force: :cascade do |t|
@@ -72,8 +69,6 @@ ActiveRecord::Schema.define(version: 20171212160315) do
     t.string "sequencing_date", limit: 256
     t.string "disease", limit: 256
     t.string "meddra_code", limit: 256
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
   end
 
   create_table "snv_mnv_indel", id: :integer, force: :cascade do |t|
@@ -83,6 +78,7 @@ ActiveRecord::Schema.define(version: 20171212160315) do
     t.string "gene", limit: 256
     t.string "chromosome", limit: 256
     t.integer "position"
+    t.integer "read_depth"
     t.float "allele_frequency"
     t.string "reference", limit: 256
     t.string "alternative", limit: 256
@@ -91,7 +87,6 @@ ActiveRecord::Schema.define(version: 20171212160315) do
     t.string "classification", limit: 256
     t.string "protein", limit: 256
     t.string "ncbi_reference_number", limit: 256
-    t.integer "read_depth"
   end
 
 end

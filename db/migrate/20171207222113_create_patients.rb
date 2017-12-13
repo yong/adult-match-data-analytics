@@ -7,8 +7,6 @@ class CreatePatients < ActiveRecord::Migration[5.1]
       t.string :sequencing_date
       t.string :disease
       t.string :meddra_code
-
-      t.timestamps
     end
 
     create_table :inclusion_scenerios do |t|
@@ -25,18 +23,15 @@ class CreatePatients < ActiveRecord::Migration[5.1]
 
     create_table :patient_scenerios do |t|
       t.integer :patients_id, null: false
+      t.integer :patient_scenerios_id
       t.integer :inclusion_scenerios_id, null: false
       t.integer :exclusion_scenerios_id, null: false
-
-      t.timestamps
     end
 
     create_table :arms do |t|
       t.integer :patient_scenerios_id, null: false
       t.string :arm, null: false
       t.string :selection_type, default: 'POTENTIAL', null: false
-
-      t.timestamps
     end
 
     create_table :snv_mnv_indel do |t|
@@ -46,6 +41,7 @@ class CreatePatients < ActiveRecord::Migration[5.1]
       t.string :gene
       t.string :chromosome
       t.integer :position
+      t.integer :read_depth
       t.float :allele_frequency
       t.string :reference
       t.string :alternative
@@ -61,8 +57,8 @@ class CreatePatients < ActiveRecord::Migration[5.1]
       t.string :gene
       t.string :chromosome
       t.integer :position
-      t.integer :raw_copy_number
-      t.integer :copy_number
+      t.float :raw_copy_number
+      t.float :copy_number
       t.float :ci_5
       t.float :ci_95
     end
